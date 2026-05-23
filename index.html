@@ -535,18 +535,20 @@
       showStatus('success','系統正在送出申請，請勿重複點擊。');
 
       try {
-        await fetch(BACKEND_ENDPOINT, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
+        // GitHub Pages → Apps Script：改用 GET beacon，避免跨網域 CORS / preflight 導致 doPost 不觸發。
+        const url = `${BACKEND_ENDPOINT}?payload=${encodeURIComponent(JSON.stringify(payload))}&t=${Date.now()}`;
+        const beacon = new Image();
+        beacon.referrerPolicy = 'no-referrer';
+        beacon.src = url;
 
-        showStatus('success', `${payload.applicantName} 您好，${payload.room} 於 ${payload.bookingDate} ${payload.timeRange} 的借用申請已送出。系統將寫入後端紀錄，並由中心窗口確認後通知結果。`);
-        form.reset();
+        // Apps Script 回傳的是文字，不是圖片，因此 onerror 也可能代表請求已送達；此處以固定時間顯示送出結果。
+        window.setTimeout(() => {
+          showStatus('success', `${payload.applicantName} 您好，${payload.room} 於 ${payload.bookingDate} ${payload.timeRange} 的借用申請已送出。系統將寫入後端紀錄，並由中心窗口確認後通知結果。`);
+          form.reset();
+          setSubmitting(false);
+        }, 1200);
       } catch (error) {
         showStatus('error','申請送出失敗，請稍後再試，或直接聯絡中心窗口：mattwang@nycu.edu.tw / lin1129.ci13@nycu.edu.tw。');
-      } finally {
         setSubmitting(false);
       }
     });
